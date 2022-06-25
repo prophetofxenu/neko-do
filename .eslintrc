@@ -11,6 +11,7 @@
   ],
   "rules": {
     "no-console": 1,
+    "@typescript-eslint/no-explicit-any": "off",
 
     "indent": [ "error", 2 ],
     "no-extra-parens": 2,
