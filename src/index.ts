@@ -1,3 +1,4 @@
+import bodyParser from 'body-parser';
 import express, { Express, Request, Response } from 'express';
 import DigitalOcean from 'do-wrapper';
 import dotenv from 'dotenv';
@@ -9,6 +10,7 @@ import room from './models/room';
 
 import { checkProject } from './project';
 import { Context } from './types';
+import { randomPw } from './util';
 
 
 dotenv.config();
@@ -28,6 +30,12 @@ const db = {
   Room: room(sequelize)
 };
 
+let domain: any;
+if (!process.env.DOMAIN) {
+  logger.error('DOMAIN not defined in .env');
+} else {
+  domain = process.env.DOMAIN;
+}
 let digiocean: any;
 if (!process.env.DO_TOKEN) {
   logger.error('DO_TOKEN with DigitalOcean API token not defined in .env');
@@ -44,11 +52,13 @@ if (!process.env.DO_SSH_KEY_ID) {
 
 const app = express();
 const port = process.env.PORT;
+app.use(bodyParser.json());
 
 const ctx: Context = {
   db: db,
   do: digiocean,
   info: {
+    domain: domain,
     doProjName: doProjName,
     sshKeyPrint: sshKeyPrint
   }
@@ -61,14 +71,20 @@ const ctx: Context = {
   logger.info(`Using DO project ${doProjName} (${projectId})`);
 
   app.post('/room', async (req, res) => {
-    const { id } = await createRoom(ctx, projectId, sshKeyPrint);
+    const provisionOptions = {
+      password: req.body.password || randomPw(),
+      adminPassword: req.body.adminPassword || randomPw()
+    };
+    const { id } = await createRoom(ctx, provisionOptions, projectId, sshKeyPrint);
     res.send({ ok: true, id: id });
   });
+
   app.put('/room/ip/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     await updateIp(ctx, id);
     res.send({ ok: true, id: id });
   });
+
   app.delete('/room/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const { ok } = await deleteRoom(ctx, id);

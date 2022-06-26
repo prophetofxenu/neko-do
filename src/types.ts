@@ -6,6 +6,7 @@ export interface Context {
   },
   do: any,
   info: {
+    domain: string,
     doProjName: string,
     sshKeyPrint: string
   }

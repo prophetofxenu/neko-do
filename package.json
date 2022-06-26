@@ -15,6 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/sequelize": "^4.28.13",
+    "body-parser": "^1.20.0",
     "do-wrapper": "^4.5.1",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
