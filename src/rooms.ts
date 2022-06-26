@@ -1,5 +1,5 @@
 import logger from 'winston';
-import { ProvisionOptions } from './provision';
+import genProvisionScript, { ProvisionOptions } from './provision';
 import { Context } from './types';
 import { dateDelta, dropletId } from './util';
 
@@ -49,14 +49,18 @@ export async function createDomainEntry(ctx: Context, id: number) {
 export async function createRoom(ctx: Context, provisionOptions: ProvisionOptions,
   projectId: string, sshKeyPrint: string) {
 
+  const name = `neko-room-${dropletId()}`;
+  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, name);
+
   const createResult = await ctx.do.droplets.create({
-    name: `neko-room-${dropletId()}`,
+    name: name,
     region: 'nyc1',
     size: 's-4vcpu-8gb',
     image: 'ubuntu-20-04-x64',
     ssh_keys: [ sshKeyPrint ],
     monitoring: true,
-    tags: [ 'neko' ]
+    tags: [ 'neko' ],
+    user_data: provisionScript
   });
   logger.debug('Droplet request sent', createResult);
   const room = await ctx.db.Room.create({
