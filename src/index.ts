@@ -3,12 +3,11 @@ import DigitalOcean from 'do-wrapper';
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 import logger from 'winston';
-import { createRoom, deleteRoom } from './rooms';
+import { createRoom, deleteRoom, updateIp } from './rooms';
 
 import room from './models/room';
 
 import { checkProject } from './project';
-import { dropletId } from './util';
 import { Context } from './types';
 
 
@@ -63,6 +62,11 @@ const ctx: Context = {
 
   app.post('/room', async (req, res) => {
     const { id } = await createRoom(ctx, projectId, sshKeyPrint);
+    res.send({ ok: true, id: id });
+  });
+  app.put('/room/ip/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    await updateIp(ctx, id);
     res.send({ ok: true, id: id });
   });
   app.delete('/room/:id', async (req, res) => {

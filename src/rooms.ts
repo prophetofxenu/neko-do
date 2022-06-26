@@ -3,6 +3,26 @@ import { Context } from './types';
 import { dateDelta, dropletId } from './util';
 
 
+export async function updateIp(ctx: Context, id: number) {
+  logger.debug(`Getting IP address for room ${id}`);
+  const room = await ctx.db.Room.findByPk(id);
+  const dropletResult = await ctx.do.droplets.getById(room.do_id.toString());
+  logger.debug('Result of IP retrieval', dropletResult);
+
+  if (dropletResult.droplet.status !== 'active') {
+    logger.debug('Droplet still not ready, retrying in 20s');
+    setTimeout(async () => {
+      await updateIp(ctx, id);
+    }, 20000);
+    return;
+  }
+
+  const ip = dropletResult.droplet.networks.v4[0].ip_address;
+  room.ip = ip;
+  await room.save();
+}
+
+
 export async function createRoom(ctx: Context, projectId: string, sshKeyPrint: string) {
 
   const createResult = await ctx.do.droplets.create({
@@ -28,9 +48,13 @@ export async function createRoom(ctx: Context, projectId: string, sshKeyPrint: s
   );
   logger.debug('Droplet associated with project', projAssociationResult);
 
+  setTimeout(async () => {
+    await updateIp(ctx, room.id);
+  }, 45000);
+
   return {
     id: room.id
-  }
+  };
 
 }
 
