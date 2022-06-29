@@ -4,7 +4,7 @@ import DigitalOcean from 'do-wrapper';
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 import logger from 'winston';
-import { createRoom, deleteRoom, updateIp } from './rooms';
+import { checkProvisioningStatus, createRoom, deleteRoom, updateIp } from './rooms';
 
 import room from './models/room';
 
@@ -65,7 +65,7 @@ const ctx: Context = {
 };
 
 (async () => {
-  await sequelize.sync({ alter: true });
+  // await sequelize.sync({ force: true });
 
   const projectId = await checkProject(digiocean, doProjName);
   logger.info(`Using DO project ${doProjName} (${projectId})`);
@@ -90,6 +90,8 @@ const ctx: Context = {
     const { ok } = await deleteRoom(ctx, id);
     res.send({ ok: ok });
   });
+
+  setInterval(() => { checkProvisioningStatus(ctx) }, 10000);
 
   app.listen(port, () => {
     logger.info(`Express server is running at https://localhost:${port}`);

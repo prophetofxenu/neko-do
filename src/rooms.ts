@@ -1,7 +1,9 @@
 import logger from 'winston';
+import { Op } from 'sequelize';
 import genProvisionScript, { ProvisionOptions } from './provision';
 import { Context } from './types';
 import { dateDelta, dropletId } from './util';
+import axios from 'axios';
 
 
 export async function updateIp(ctx: Context, id: number) {
@@ -42,6 +44,7 @@ export async function createDomainEntry(ctx: Context, id: number) {
   logger.debug('Result of domain entry creation', recordResult);
   room.url = `${room.name}.${ctx.info.domain}`;
   room.record_id = recordResult.domain_record.id;
+  room.status = 'record_created';
   await room.save();
 }
 
@@ -65,6 +68,7 @@ export async function createRoom(ctx: Context, provisionOptions: ProvisionOption
   logger.debug('Droplet request sent', createResult);
   const room = await ctx.db.Room.create({
     name: createResult.droplet.name,
+    status: 'submitted',
     do_id: createResult.droplet.id,
     password: provisionOptions.password,
     admin_password: provisionOptions.adminPassword,
@@ -94,8 +98,7 @@ async function deleteDomainEntry(ctx: Context, id: number) {
   const room = await ctx.db.Room.findByPk(id);
   const deleteResult = await ctx.do.domains.deleteRecord(ctx.info.domain, room.record_id);
   logger.debug('Domain entry deletion', deleteResult);
-  room.url = null;
-  room.record_id = null;
+  room.status = 'record_destroyed';
   await room.save();
   logger.debug(`Domain entry removed for room ${id}`);
 }
@@ -108,9 +111,47 @@ export async function deleteRoom(ctx: Context, id: number) {
   const room = await ctx.db.Room.findByPk(id);
   const deleteResult = await ctx.do.droplets.deleteById(room.do_id);
   logger.debug('Droplet deletion request sent', deleteResult);
-  await room.destroy();
+  room.status = 'destroyed';
+  await room.save();
   logger.debug('Droplet removed from db');
 
   return { ok: true, id: room.id };
+
+}
+
+
+export async function checkProvisioningStatus(ctx: Context) {
+
+  logger.debug('Check provisioning status of in progress rooms');
+  const inProgressRooms = await ctx.db.Room.findAll({
+    where: {
+      status: {
+        [Op.or]: {
+          [Op.eq]: 'record_created'
+        }
+      }
+    }
+  });
+
+  for (const room of inProgressRooms) {
+    logger.debug(`Checking provision status of room ${room.id}`);
+    try {
+      const status = await axios.get(`https://${room.url}`, { timeout: 1000 });
+      switch (status.status) {
+      case 200:
+        room.status = 'active';
+        await room.save();
+        logger.info(`Room ${room.id} is ready`)
+        break;
+      case 502:
+        room.status = 'proxy_ready';
+        await room.save();
+        logger.info(`Proxy ready on ${room.id}`)
+        break;
+      }
+    } catch (error) {
+      continue;
+    }
+  }
 
 }
