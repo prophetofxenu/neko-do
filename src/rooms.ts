@@ -126,9 +126,11 @@ export async function checkProvisioningStatus(ctx: Context) {
   const inProgressRooms = await ctx.db.Room.findAll({
     where: {
       status: {
-        [Op.or]: {
-          [Op.eq]: 'record_created'
-        }
+        [Op.notIn]: [
+          'ready',
+          'destroyed',
+          'record_destroyed'
+        ]
       }
     }
   });
@@ -136,20 +138,19 @@ export async function checkProvisioningStatus(ctx: Context) {
   for (const room of inProgressRooms) {
     logger.debug(`Checking provision status of room ${room.id}`);
     try {
-      const status = await axios.get(`https://${room.url}`, { timeout: 1000 });
-      switch (status.status) {
-      case 200:
-        room.status = 'active';
+      const res = await axios.get(`http://${room.ip}:6969`, { timeout: 250 });
+      logger.debug(`Status of room ${room.id}: ${res.data}`);
+      const [ _, step, status ] = res.data.match(/^(\d+):(.+)$/m);
+      if (step !== room.step) {
+        room.step = parseInt(step);
+        room.status = status;
         await room.save();
-        logger.info(`Room ${room.id} is ready`)
-        break;
-      case 502:
-        room.status = 'proxy_ready';
-        await room.save();
-        logger.info(`Proxy ready on ${room.id}`)
-        break;
+        if (status === 'ready') {
+          logger.info(`Room ${room.id} is ready`);
+        }
       }
     } catch (error) {
+      logger.error(error);
       continue;
     }
   }

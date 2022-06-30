@@ -65,7 +65,7 @@ const ctx: Context = {
 };
 
 (async () => {
-  // await sequelize.sync({ force: true });
+  await sequelize.sync({ alter: true });
 
   const projectId = await checkProject(digiocean, doProjName);
   logger.info(`Using DO project ${doProjName} (${projectId})`);

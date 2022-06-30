@@ -8,16 +8,12 @@ function room(sequelize: Sequelize) {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM,
-      values: [
-        'submitted',
-        'record_created',
-        'proxy_ready',
-        'active',
-        'record_destroyed',
-        'destroyed'
-      ],
+      type: DataTypes.STRING(30),
       defaultValue: 'submitted',
+    },
+    step: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
     },
     do_id: {
       type: DataTypes.INTEGER,
