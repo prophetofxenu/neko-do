@@ -6,6 +6,10 @@ import { dateDelta, dropletId } from './util';
 import axios from 'axios';
 
 
+export const READY_STEP = 11;
+export const DESTROYED_STEP = READY_STEP + 2;
+
+
 export async function updateIp(ctx: Context, id: number) {
   logger.debug(`Getting IP address for room ${id}`);
   const room = await ctx.db.Room.findByPk(id);
@@ -22,6 +26,8 @@ export async function updateIp(ctx: Context, id: number) {
 
   const ip = dropletResult.droplet.networks.v4[0].ip_address;
   room.ip = ip;
+  room.step = 2;
+  room.status = 'ip_acquired'
   await room.save();
 
   await createDomainEntry(ctx, id);
@@ -44,6 +50,7 @@ export async function createDomainEntry(ctx: Context, id: number) {
   logger.debug('Result of domain entry creation', recordResult);
   room.url = `${room.name}.${ctx.info.domain}`;
   room.record_id = recordResult.domain_record.id;
+  room.step = 3;
   room.status = 'record_created';
   await room.save();
 }
@@ -69,6 +76,7 @@ export async function createRoom(ctx: Context, provisionOptions: ProvisionOption
   const room = await ctx.db.Room.create({
     name: createResult.droplet.name,
     status: 'submitted',
+    step: 1,
     do_id: createResult.droplet.id,
     password: provisionOptions.password,
     admin_password: provisionOptions.adminPassword,
@@ -98,6 +106,7 @@ async function deleteDomainEntry(ctx: Context, id: number) {
   const room = await ctx.db.Room.findByPk(id);
   const deleteResult = await ctx.do.domains.deleteRecord(ctx.info.domain, room.record_id);
   logger.debug('Domain entry deletion', deleteResult);
+  room.step = READY_STEP + 1;
   room.status = 'record_destroyed';
   await room.save();
   logger.debug(`Domain entry removed for room ${id}`);
@@ -111,6 +120,7 @@ export async function deleteRoom(ctx: Context, id: number) {
   const room = await ctx.db.Room.findByPk(id);
   const deleteResult = await ctx.do.droplets.deleteById(room.do_id);
   logger.debug('Droplet deletion request sent', deleteResult);
+  room.step = DESTROYED_STEP;
   room.status = 'destroyed';
   await room.save();
   logger.debug('Droplet removed from db');

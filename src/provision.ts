@@ -18,7 +18,7 @@ export function genProvisionScript(options: ProvisionOptions,
   return `#!/bin/bash
 set -e
 
-step=1
+step=4
 monitor_msg () {
   echo "$step:$1" > /monitoring/index.txt
   step=$(echo "$step+1" | bc)
