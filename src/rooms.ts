@@ -60,6 +60,7 @@ export async function createRoom(ctx: Context, provisionOptions: ProvisionOption
   projectId: string, sshKeyPrint: string) {
 
   const name = `neko-room-${dropletId()}`;
+  logger.debug(`Provision options for ${name}`, provisionOptions);
   const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, name);
 
   const createResult = await ctx.do.droplets.create({

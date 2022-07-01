@@ -72,6 +72,9 @@ const ctx: Context = {
 
   app.post('/room', async (req, res) => {
     const provisionOptions = {
+      image: req.body.image,
+      resolution: req.body.resolution,
+      fps: req.body.fps,
       password: req.body.password || randomPw(),
       adminPassword: req.body.adminPassword || randomPw()
     };

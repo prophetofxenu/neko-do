@@ -8,9 +8,32 @@ export interface ProvisionOptions {
 }
 
 
+export function imageMap(imageName: string): string {
+  const image = {
+    'vivaldi':            'm1k1o/neko:vivaldi',
+    'ungoogled-chromium': 'm1k1o/neko:ungoogled-chromium',
+    'microsoft-edge':     'm1k1o/neko:microsoft-edge',
+    'brave':              'm1k1o/neko:brave',
+    'firefox':            'm1k1o/neko:firefox',
+    'chromium':           'm1k1o/neko:chromium',
+    'google-chrome':      'm1k1o/neko:google-chrome',
+    'tor-browser':        'm1k1o/neko:tor-browser',
+    'remmina':            'm1k1o/neko:remmina',
+    'xfce':               'm1k1o/neko:xfce',
+    'vlc':                'm1k1o/neko:vlc',
+    'vncviewer':          'm1k1o/neko:vncviewer'
+  }[imageName];
+
+  if (!image) {
+    throw 'Invalid image name';
+  }
+  return image;
+}
+
+
 export function genProvisionScript(options: ProvisionOptions,
   domain: string, subdomain: string): string {
-  const image = options.image || 'firefox';
+  const image = imageMap(options.image || 'firefox');
   const resp = options.resolution || '720p';
   const resolution = resp === '720p' ? '1280x720' : '1920x1080';
   const fps = options.fps || 30;
@@ -92,7 +115,7 @@ cat > docker-compose.yaml <<EOF
 version: "3.4"
 services:
   neko:
-    image: "m1k1o/neko:${image}"
+    image: "${image}"
     restart: "unless-stopped"
     shm_size: "8gb"
     ports:
