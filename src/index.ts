@@ -4,13 +4,12 @@ import DigitalOcean from 'do-wrapper';
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 import logger from 'winston';
-import { checkProvisioningStatus, createRoom, deleteRoom, updateIp } from './rooms';
+import { checkProvisioningStatus, createRoom, deleteRoom, getStatus, updateIp } from './rooms';
 
 import room from './models/room';
 
 import { checkProject } from './project';
 import { Context } from './types';
-import { randomPw } from './util';
 
 
 dotenv.config();
@@ -70,28 +69,34 @@ const ctx: Context = {
   const projectId = await checkProject(digiocean, doProjName);
   logger.info(`Using DO project ${doProjName} (${projectId})`);
 
+  app.get('/room/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const room = await getStatus(ctx, id);
+    res.send({ room: room });
+  });
+
   app.post('/room', async (req, res) => {
     const provisionOptions = {
       image: req.body.image,
       resolution: req.body.resolution,
       fps: req.body.fps,
-      password: req.body.password || randomPw(),
-      adminPassword: req.body.adminPassword || randomPw()
+      password: req.body.password,
+      adminPassword: req.body.adminPassword
     };
-    const { id } = await createRoom(ctx, provisionOptions, projectId, sshKeyPrint);
-    res.send({ ok: true, id: id });
+    const room = await createRoom(ctx, provisionOptions, projectId, sshKeyPrint);
+    res.send({ room: room });
   });
 
   app.put('/room/ip/:id', async (req, res) => {
     const id = parseInt(req.params.id);
-    await updateIp(ctx, id);
-    res.send({ ok: true, id: id });
+    const room = await updateIp(ctx, id);
+    res.send({ room: room });
   });
 
   app.delete('/room/:id', async (req, res) => {
     const id = parseInt(req.params.id);
-    const { ok } = await deleteRoom(ctx, id);
-    res.send({ ok: ok });
+    const room = await deleteRoom(ctx, id);
+    res.send({ room: room });
   });
 
   setInterval(() => { checkProvisioningStatus(ctx) }, 10000);

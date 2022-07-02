@@ -28,6 +28,18 @@ function room(sequelize: Sequelize) {
     record_id: {
       type: DataTypes.INTEGER,
     },
+    image: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    resolution: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    fps: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
     password: {
       type: DataTypes.STRING,
       allowNull: false

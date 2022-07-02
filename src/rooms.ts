@@ -1,6 +1,6 @@
 import logger from 'winston';
 import { Op } from 'sequelize';
-import genProvisionScript, { ProvisionOptions } from './provision';
+import genProvisionScript, { makeProvisionOpts, ProvisionOptions } from './provision';
 import { Context } from './types';
 import { dateDelta, dropletId } from './util';
 import axios from 'axios';
@@ -8,6 +8,13 @@ import axios from 'axios';
 
 export const READY_STEP = 11;
 export const DESTROYED_STEP = READY_STEP + 2;
+
+
+export async function getStatus(ctx: Context, id: number) {
+  logger.debug(`Querying info for room ${id}`);
+  const room = await ctx.db.Room.findByPk(id);
+  return room;
+}
 
 
 export async function updateIp(ctx: Context, id: number) {
@@ -21,7 +28,7 @@ export async function updateIp(ctx: Context, id: number) {
     setTimeout(async () => {
       await updateIp(ctx, id);
     }, 20000);
-    return;
+    return room;
   }
 
   const ip = dropletResult.droplet.networks.v4[0].ip_address;
@@ -30,7 +37,7 @@ export async function updateIp(ctx: Context, id: number) {
   room.status = 'ip_acquired'
   await room.save();
 
-  await createDomainEntry(ctx, id);
+  return await createDomainEntry(ctx, id);
 }
 
 
@@ -39,7 +46,7 @@ export async function createDomainEntry(ctx: Context, id: number) {
   const room = await ctx.db.Room.findByPk(id);
   if (room.url !== null) {
     logger.debug(`Domain entry already in db for room ${id}`);
-    return;
+    return room;
   }
 
   const recordResult = await ctx.do.domains.createRecord(ctx.info.domain, {
@@ -53,13 +60,15 @@ export async function createDomainEntry(ctx: Context, id: number) {
   room.step = 3;
   room.status = 'record_created';
   await room.save();
+  return room;
 }
 
 
-export async function createRoom(ctx: Context, provisionOptions: ProvisionOptions,
+export async function createRoom(ctx: Context, opts: ProvisionOptions,
   projectId: string, sshKeyPrint: string) {
 
   const name = `neko-room-${dropletId()}`;
+  const provisionOptions = makeProvisionOpts(opts);
   logger.debug(`Provision options for ${name}`, provisionOptions);
   const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, name);
 
@@ -79,6 +88,9 @@ export async function createRoom(ctx: Context, provisionOptions: ProvisionOption
     status: 'submitted',
     step: 1,
     do_id: createResult.droplet.id,
+    image: provisionOptions.image,
+    resolution: provisionOptions.resolution,
+    fps: provisionOptions.fps,
     password: provisionOptions.password,
     admin_password: provisionOptions.adminPassword,
     expires: dateDelta(new Date(), 7200)
@@ -95,9 +107,7 @@ export async function createRoom(ctx: Context, provisionOptions: ProvisionOption
     await updateIp(ctx, room.id);
   }, 45000);
 
-  return {
-    id: room.id
-  };
+  return room;
 
 }
 
@@ -126,7 +136,7 @@ export async function deleteRoom(ctx: Context, id: number) {
   await room.save();
   logger.debug('Droplet removed from db');
 
-  return { ok: true, id: room.id };
+  return room;
 
 }
 

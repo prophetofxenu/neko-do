@@ -1,3 +1,5 @@
+import { randomPw } from './util';
+
 export interface ProvisionOptions {
   image?: 'vivaldi' | 'ungoogled-chromium' | 'microsoft-edge' | 'brave' | 'firefox' | 'chromium' |
     'google-chrome' | 'tor-browser' | 'remmina' | 'xfce' | 'vlc' | 'vncviewer',
@@ -5,6 +7,17 @@ export interface ProvisionOptions {
   fps?: 30 | 60,
   password: string,
   adminPassword: string
+}
+
+
+export function makeProvisionOpts(opts: ProvisionOptions): ProvisionOptions {
+  return {
+    image: opts.image || 'firefox',
+    resolution: opts.resolution || '1080p',
+    fps: opts.fps || 30,
+    password: opts.password || randomPw(),
+    adminPassword: opts.adminPassword || randomPw()
+  };
 }
 
 
