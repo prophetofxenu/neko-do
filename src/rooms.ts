@@ -13,6 +13,9 @@ export const DESTROYED_STEP = READY_STEP + 2;
 export async function getStatus(ctx: Context, id: number) {
   logger.debug(`Querying info for room ${id}`);
   const room = await ctx.db.Room.findByPk(id);
+  if (!room) {
+    logger.warn(`Room ${id} not found during querying of status`);
+  }
   return room;
 }
 
@@ -20,6 +23,10 @@ export async function getStatus(ctx: Context, id: number) {
 export async function updateIp(ctx: Context, id: number) {
   logger.debug(`Getting IP address for room ${id}`);
   const room = await ctx.db.Room.findByPk(id);
+  if (!room) {
+    logger.warn(`Room ${id} not found during updating of IP`);
+    return null;
+  }
   const dropletResult = await ctx.do.droplets.getById(room.do_id.toString());
   logger.debug('Result of IP retrieval', dropletResult);
 
@@ -44,6 +51,10 @@ export async function updateIp(ctx: Context, id: number) {
 export async function createDomainEntry(ctx: Context, id: number) {
   logger.debug(`Creating domain entry for room ${id}`);
   const room = await ctx.db.Room.findByPk(id);
+  if (!room) {
+    logger.warn(`Room ${id} not found during creation of domain entry`);
+    return null;
+  }
   if (room.url !== null) {
     logger.debug(`Domain entry already in db for room ${id}`);
     return room;
@@ -93,7 +104,7 @@ export async function createRoom(ctx: Context, opts: ProvisionOptions,
     fps: provisionOptions.fps,
     password: provisionOptions.password,
     admin_password: provisionOptions.adminPassword,
-    expires: dateDelta(new Date(), 7200)
+    expires: dateDelta(new Date(), 1000)
   });
   logger.debug('Droplet saved to db');
 
@@ -112,9 +123,42 @@ export async function createRoom(ctx: Context, opts: ProvisionOptions,
 }
 
 
+export async function renewRoom(ctx: Context, id: number) {
+
+  const room = await ctx.db.Room.findByPk(id);
+  if (!room) {
+    logger.warn(`Room ${id} not found during renewal`);
+    return null;
+  }
+  if (room.status !== 'ready') {
+    logger.warn(`Tried to renew room ${id} but it is not ready`);
+    return room;
+  }
+
+  const diff = Number(room.expires) - Number(new Date());
+  if (diff < 0) {
+    logger.info(`Tried to renew room ${id} but it has expired`);
+    return room;
+  }
+  if (diff > 3600 * 1000) {
+    logger.info(`Tried to renew room ${id} but it still has more than an hour left`);
+    return room;
+  }
+  room.expires = dateDelta(new Date(), 3600);
+  await room.save();
+  logger.info(`Expiration time for room ${id} set to one hour from now`);
+  return room;
+
+}
+
+
 async function deleteDomainEntry(ctx: Context, id: number) {
   logger.debug(`Deleting domain entry for room ${id}`);
   const room = await ctx.db.Room.findByPk(id);
+  if (!room) {
+    logger.warn(`Room ${id} not found during deletion of domain entry`);
+    return null;
+  }
   const deleteResult = await ctx.do.domains.deleteRecord(ctx.info.domain, room.record_id);
   logger.debug('Domain entry deletion', deleteResult);
   room.step = READY_STEP + 1;
@@ -129,6 +173,10 @@ export async function deleteRoom(ctx: Context, id: number) {
   await deleteDomainEntry(ctx, id);
 
   const room = await ctx.db.Room.findByPk(id);
+  if (!room) {
+    logger.warn(`Room ${id} not found during deletion`);
+    return null;
+  }
   const deleteResult = await ctx.do.droplets.deleteById(room.do_id);
   logger.debug('Droplet deletion request sent', deleteResult);
   room.step = DESTROYED_STEP;
