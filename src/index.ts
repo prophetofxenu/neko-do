@@ -4,7 +4,7 @@ import DigitalOcean from 'do-wrapper';
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 import logger from 'winston';
-import { checkProvisioningStatus, createRoom, deleteRoom, getStatus, updateIp } from './rooms';
+import { checkForExpired, checkProvisioningStatus, createRoom, deleteRoom, getStatus, updateIp } from './rooms';
 
 import room from './models/room';
 
@@ -99,7 +99,12 @@ const ctx: Context = {
     res.send({ room: room });
   });
 
-  setInterval(() => { checkProvisioningStatus(ctx) }, 10000);
+  setInterval(() => {
+    Promise.all([
+      checkProvisioningStatus(ctx),
+      checkForExpired(ctx)
+    ]);
+  }, 10000);
 
   app.listen(port, () => {
     logger.info(`Express server is running at https://localhost:${port}`);

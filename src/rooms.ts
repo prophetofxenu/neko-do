@@ -177,3 +177,25 @@ export async function checkProvisioningStatus(ctx: Context) {
   }
 
 }
+
+
+export async function checkForExpired(ctx: Context) {
+
+  logger.debug('Checking for expired rooms');
+  const expiredRooms = await ctx.db.Room.findAll({
+    where: {
+      status: 'ready',
+      expires: {
+        [Op.lt]: new Date()
+      }
+    }
+  });
+
+  const promises = [];
+  for (const room of expiredRooms) {
+    logger.info(`Room ${room.id} has expired, removing`);
+    promises.push(deleteRoom(ctx, room.id));
+  }
+  await Promise.all(promises);
+
+}
