@@ -7,9 +7,11 @@ import logger from 'winston';
 import { checkForExpired, checkProvisioningStatus, createRoom, deleteRoom, getStatus, renewRoom, updateIp } from './rooms';
 
 import room from './models/room';
+import user from './models/user';
 
 import { checkProject } from './project';
 import { Context } from './types';
+import { bearerToJwt, checkPw, checkType, createUser, issueToken, loadSigningKey } from './auth';
 
 
 dotenv.config();
@@ -26,7 +28,8 @@ const sequelize = new Sequelize(dbString, {
 });
 sequelize.authenticate();
 const db = {
-  Room: room(sequelize)
+  Room: room(sequelize),
+  User: user(sequelize)
 };
 
 let domain: any;
@@ -53,29 +56,46 @@ const app = express();
 const port = process.env.PORT;
 app.use(bodyParser.json());
 
-const ctx: Context = {
-  db: db,
-  do: digiocean,
-  info: {
-    domain: domain,
-    doProjName: doProjName,
-    sshKeyPrint: sshKeyPrint
-  }
-};
-
 (async () => {
+  const signingKey = await loadSigningKey();
+
+  const ctx: Context = {
+    db: db,
+    do: digiocean,
+    info: {
+      domain: domain,
+      doProjName: doProjName,
+      sshKeyPrint: sshKeyPrint,
+      signingKey: signingKey
+    }
+  };
+
   await sequelize.sync({ alter: true });
 
   const projectId = await checkProject(digiocean, doProjName);
   logger.info(`Using DO project ${doProjName} (${projectId})`);
 
   app.get('/room/:id', async (req, res) => {
+
+    const jwt = bearerToJwt(ctx, req.headers.authorization);
+    if (!jwt || checkType(jwt, 'disabled')) {
+      res.status(403).send({ error: 'Invalid JWT' });
+      return;
+    }
+
     const id = parseInt(req.params.id);
     const room = await getStatus(ctx, id);
     res.send({ room: room });
   });
 
   app.post('/room', async (req, res) => {
+
+    const jwt = bearerToJwt(ctx, req.headers.authorization);
+    if (!jwt || !checkType(jwt, 'admin')) {
+      res.status(403).send({ error: 'Unauthorized' });
+      return;
+    }
+
     const provisionOptions = {
       image: req.body.image,
       resolution: req.body.resolution,
@@ -88,21 +108,45 @@ const ctx: Context = {
   });
 
   app.put('/room/:id', async (req, res) => {
+
+    const jwt = bearerToJwt(ctx, req.headers.authorization);
+    if (!jwt || !checkType(jwt, 'admin')) {
+      res.status(403).send({ error: 'Unauthorized' });
+      return;
+    }
+
     const id = parseInt(req.params.id);
     const room = await renewRoom(ctx, id);
     res.send({ room: room });
   });
 
-  app.put('/room/ip/:id', async (req, res) => {
-    const id = parseInt(req.params.id);
-    const room = await updateIp(ctx, id);
-    res.send({ room: room });
-  });
-
   app.delete('/room/:id', async (req, res) => {
+
+    const jwt = bearerToJwt(ctx, req.headers.authorization);
+    if (!jwt || !checkType(jwt, 'admin')) {
+      res.status(403).send({ error: 'Unauthorized' });
+      return;
+    }
+
     const id = parseInt(req.params.id);
     const room = await deleteRoom(ctx, id);
     res.send({ room: room });
+  });
+
+  app.post('/user', async (req, res) => {
+    const name = req.body.name;
+    const pw = req.body.pw;
+    const user = await createUser(ctx, name, 'disabled', pw);
+    logger.info(`User ${user.name} (${user.id}) created`);
+    res.send({ user: user });
+  });
+
+  app.post('/login', async (req, res) => {
+    const name = req.body.name;
+    const pw = req.body.pw;
+    const token = await issueToken(ctx, name, pw);
+    logger.info(`User ${name} logged in`);
+    res.send({ token: token });
   });
 
   setInterval(() => {

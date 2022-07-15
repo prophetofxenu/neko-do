@@ -104,7 +104,7 @@ export async function createRoom(ctx: Context, opts: ProvisionOptions,
     fps: provisionOptions.fps,
     password: provisionOptions.password,
     admin_password: provisionOptions.adminPassword,
-    expires: dateDelta(new Date(), 1000)
+    expires: dateDelta(new Date(), 60 * 60 * 2)
   });
   logger.debug('Droplet saved to db');
 
