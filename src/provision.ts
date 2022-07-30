@@ -60,10 +60,7 @@ monitor_msg () {
   step=$(echo "$step+1" | bc)
 }
 
-apt-get update
-
 mkdir /monitoring
-apt-get -y install nginx
 cat > /etc/nginx/sites-available/provision-monitor <<EOF
 server {
   listen 6969;
@@ -78,12 +75,6 @@ EOF
 ln -s /etc/nginx/sites-available/provision-monitor /etc/nginx/sites-enabled/
 systemctl restart nginx
 monitor_msg 'nginx_ready'
-
-DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
-monitor_msg 'updates_finished'
-
-apt-get -y install ufw certbot python3-certbot-nginx
-monitor_msg 'ufw_certbot_installed'
 
 cat > /etc/nginx/sites-available/${domain} <<EOF
 server {
@@ -113,16 +104,6 @@ monitor_msg 'nginx_configured'
 certbot -n --nginx -d ${subdomain}.${domain} --agree-tos --register-unsafely-without-email \
   --redirect
 monitor_msg 'cert_installed'
-
-ufw allow 'Nginx HTTP'
-ufw allow 'Nginx HTTPS'
-ufw allow OpenSSH
-ufw allow 6969
-ufw --force enable
-monitor_msg 'firewall_enabled'
-
-apt-get -y install docker.io docker-compose
-monitor_msg 'docker_installed'
 
 cat > docker-compose.yaml <<EOF
 version: "3.4"

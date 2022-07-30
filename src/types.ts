@@ -10,6 +10,7 @@ export interface Context {
     domain: string,
     doProjName: string,
     sshKeyPrint: string,
+    snapshotId: number,
     signingKey: Buffer
   }
 }

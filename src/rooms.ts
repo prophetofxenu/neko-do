@@ -107,13 +107,12 @@ export async function provisionRoom(ctx: Context, room: any,
     adminPassword: room.admin_password,
   };
   const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name);
-  console.log(room);
 
   const createResult = await ctx.do.droplets.create({
     name: room.name,
     region: 'nyc1',
     size: 's-4vcpu-8gb',
-    image: 'ubuntu-20-04-x64',
+    image: `${ctx.info.snapshotId}`,
     ssh_keys: [ sshKeyPrint ],
     monitoring: true,
     tags: [ 'neko' ],

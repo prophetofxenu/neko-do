@@ -5,13 +5,14 @@ import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 import logger from 'winston';
 import { checkForExpired, checkProvisioningStatus, provisionRoom, deleteRoom, getStatus, renewRoom, updateIp, createRoom } from './rooms';
+import process from 'process';
 
 import room from './models/room';
 import user from './models/user';
 
 import { checkProject } from './project';
 import { Context } from './types';
-import { bearerToJwt, checkPw, checkType, createUser, issueToken, loadSigningKey } from './auth';
+import { bearerToJwt, checkType, createUser, issueToken, loadSigningKey } from './auth';
 
 
 dotenv.config();
@@ -32,25 +33,22 @@ const db = {
   User: user(sequelize)
 };
 
-let domain: any;
 if (!process.env.DOMAIN) {
   logger.error('DOMAIN not defined in .env');
-} else {
-  domain = process.env.DOMAIN;
+  process.exit(1);
 }
-let digiocean: any;
 if (!process.env.DO_TOKEN) {
   logger.error('DO_TOKEN with DigitalOcean API token not defined in .env');
-} else {
-  digiocean = new DigitalOcean(process.env.DO_TOKEN);
+  process.exit(1);
 }
-const doProjName = process.env.DO_PROJECT_NAME || 'neko';
-let sshKeyPrint: any;
 if (!process.env.DO_SSH_KEY_ID) {
   logger.error('DO_SSH_KEY_ID not defined in .env');
-} else {
-  sshKeyPrint = process.env.DO_SSH_KEY_ID;
+  process.exit(1);
 }
+const domain = process.env.DOMAIN;
+const doProjName = process.env.DO_PROJECT_NAME || 'neko';
+const digitalocean = new DigitalOcean(process.env.DO_TOKEN);
+const sshKeyPrint = process.env.DO_SSH_KEY_ID as string;
 
 const app = express();
 const port = process.env.PORT;
@@ -59,20 +57,30 @@ app.use(bodyParser.json());
 (async () => {
   const signingKey = await loadSigningKey();
 
+  // get snapshot id
+  const snapshots = await digitalocean.snapshots.getForDroplets('neko');
+  const snapshotId = snapshots.snapshots.filter((s: any) => s.name === 'neko-do-img')[0].id;
+  logger.info(`Snapshot ID: ${snapshotId}`);
+  if (!snapshotId) {
+    logger.error('Droplet snapshot not found');
+    process.exit(1);
+  }
+
   const ctx: Context = {
     db: db,
-    do: digiocean,
+    do: digitalocean,
     info: {
       domain: domain,
       doProjName: doProjName,
       sshKeyPrint: sshKeyPrint,
+      snapshotId: snapshotId,
       signingKey: signingKey
     }
   };
 
   await sequelize.sync({ alter: true });
 
-  const projectId = await checkProject(digiocean, doProjName);
+  const projectId = await checkProject(digitalocean, doProjName);
   logger.info(`Using DO project ${doProjName} (${projectId})`);
 
   app.get('/room/:id', async (req, res) => {
