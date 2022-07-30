@@ -4,7 +4,7 @@ import DigitalOcean from 'do-wrapper';
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 import logger from 'winston';
-import { checkForExpired, checkProvisioningStatus, createRoom, deleteRoom, getStatus, renewRoom, updateIp } from './rooms';
+import { checkForExpired, checkProvisioningStatus, provisionRoom, deleteRoom, getStatus, renewRoom, updateIp, createRoom } from './rooms';
 
 import room from './models/room';
 import user from './models/user';
@@ -103,8 +103,9 @@ app.use(bodyParser.json());
       password: req.body.password,
       adminPassword: req.body.adminPassword
     };
-    const room = await createRoom(ctx, provisionOptions, projectId, sshKeyPrint);
+    const room = await createRoom(ctx, provisionOptions);
     res.send({ room: room });
+    await provisionRoom(ctx, room, projectId, sshKeyPrint);
   });
 
   app.put('/room/:id', async (req, res) => {

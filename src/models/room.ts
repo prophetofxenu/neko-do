@@ -17,7 +17,6 @@ function room(sequelize: Sequelize) {
     },
     do_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
     },
     ip: {
       type: DataTypes.STRING(15),

@@ -75,16 +75,42 @@ export async function createDomainEntry(ctx: Context, id: number) {
 }
 
 
-export async function createRoom(ctx: Context, opts: ProvisionOptions,
-  projectId: string, sshKeyPrint: string) {
-
+export async function createRoom(ctx: Context, opts: ProvisionOptions) {
   const name = `neko-room-${dropletId()}`;
   const provisionOptions = makeProvisionOpts(opts);
   logger.debug(`Provision options for ${name}`, provisionOptions);
-  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, name);
+  const room = await ctx.db.Room.create({
+    name: name,
+    status: 'submitted',
+    step: 1,
+    image: provisionOptions.image,
+    resolution: provisionOptions.resolution,
+    fps: provisionOptions.fps,
+    password: provisionOptions.password,
+    admin_password: provisionOptions.adminPassword,
+    expires: dateDelta(new Date(), 60 * 60 + 2)
+  });
+  await room.save();
+  logger.debug(`Room ${room.id} saved to db`);
+  return room;
+}
+
+
+export async function provisionRoom(ctx: Context, room: any,
+  projectId: string, sshKeyPrint: string) {
+
+  const provisionOptions: ProvisionOptions = {
+    image: room.image,
+    resolution: room.resolution,
+    fps: room.fps,
+    password: room.password,
+    adminPassword: room.admin_password,
+  };
+  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name);
+  console.log(room);
 
   const createResult = await ctx.do.droplets.create({
-    name: name,
+    name: room.name,
     region: 'nyc1',
     size: 's-4vcpu-8gb',
     image: 'ubuntu-20-04-x64',
@@ -94,18 +120,9 @@ export async function createRoom(ctx: Context, opts: ProvisionOptions,
     user_data: provisionScript
   });
   logger.debug('Droplet request sent', createResult);
-  const room = await ctx.db.Room.create({
-    name: createResult.droplet.name,
-    status: 'submitted',
-    step: 1,
-    do_id: createResult.droplet.id,
-    image: provisionOptions.image,
-    resolution: provisionOptions.resolution,
-    fps: provisionOptions.fps,
-    password: provisionOptions.password,
-    admin_password: provisionOptions.adminPassword,
-    expires: dateDelta(new Date(), 60 * 60 * 2)
-  });
+  room.do_id = createResult.droplet.id;
+  room.expires = dateDelta(new Date(), 60 * 60 * 2);
+  await room.save();
   logger.debug('Droplet saved to db');
 
   const projAssociationResult = await ctx.do.projects.addResources(
@@ -200,6 +217,9 @@ export async function checkProvisioningStatus(ctx: Context) {
           'destroyed',
           'record_destroyed'
         ]
+      },
+      ip: {
+        [Op.not]: null
       }
     }
   });

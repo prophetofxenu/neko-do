@@ -60,7 +60,7 @@ export function bearerToJwt(ctx: Context, headerContent: string | undefined) {
     logger.warn('Bearer token was missing');
     return null;
   }
-  const matches = headerContent.match(/^Bearer ([A-z0-9.]+)$/);
+  const matches = headerContent.match(/^Bearer ([A-z0-9.+/=-]+)$/);
   if (matches?.length !== 2) {
     logger.warn('Bearer token was invalid');
     return null;
