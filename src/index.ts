@@ -1,10 +1,19 @@
 import bodyParser from 'body-parser';
-import express, { Express, Request, Response } from 'express';
+import express from 'express';
 import DigitalOcean from 'do-wrapper';
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 import logger from 'winston';
-import { checkForExpired, checkProvisioningStatus, provisionRoom, deleteRoom, getStatus, renewRoom, updateIp, createRoom } from './rooms';
+import {
+  checkForExpired,
+  checkProvisioningStatus,
+  provisionRoom,
+  deleteRoom,
+  getStatus,
+  renewRoom,
+  createRoom,
+  markRoomForDeletion
+} from './rooms';
 import process from 'process';
 
 import room from './models/room';
@@ -12,7 +21,13 @@ import user from './models/user';
 
 import { checkProject } from './project';
 import { Context } from './types';
-import { bearerToJwt, checkType, createUser, issueToken, loadSigningKey } from './auth';
+import {
+  bearerToJwt,
+  checkType,
+  createUser,
+  issueToken,
+  loadSigningKey
+} from './auth';
 
 
 dotenv.config();
@@ -138,8 +153,9 @@ app.use(bodyParser.json());
     }
 
     const id = parseInt(req.params.id);
-    const room = await deleteRoom(ctx, id);
+    const room = await markRoomForDeletion(ctx, id);
     res.send({ room: room });
+    await deleteRoom(ctx, id);
   });
 
   app.post('/user', async (req, res) => {

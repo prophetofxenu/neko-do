@@ -6,8 +6,8 @@ import { dateDelta, dropletId } from './util';
 import axios from 'axios';
 
 
-export const READY_STEP = 11;
-export const DESTROYED_STEP = READY_STEP + 2;
+export const READY_STEP = 7;
+export const DESTROYED_STEP = READY_STEP + 3;
 
 
 export async function getStatus(ctx: Context, id: number) {
@@ -184,6 +184,20 @@ async function deleteDomainEntry(ctx: Context, id: number) {
 }
 
 
+export async function markRoomForDeletion(ctx: Context, id: number) {
+  const room = await ctx.db.Room.findByPk(id);
+  if (!room) {
+    logger.warn(`Room ${id} not found during mark for deletion`);
+    return null;
+  }
+
+  room.step++;
+  room.status = 'decommissioning';
+  await room.save();
+  return room;
+}
+
+
 export async function deleteRoom(ctx: Context, id: number) {
 
   await deleteDomainEntry(ctx, id);
@@ -199,6 +213,7 @@ export async function deleteRoom(ctx: Context, id: number) {
   room.status = 'destroyed';
   await room.save();
   logger.debug('Droplet removed from db');
+  logger.info(`Room ${id} destroyed`);
 
   return room;
 
