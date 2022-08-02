@@ -7,6 +7,7 @@ import { Context } from './types';
 
 
 const SALT_ROUNDS = 10;
+const EXPIRATION_HOURS = 12;
 
 
 export async function createHash(pw: string) {
@@ -118,6 +119,7 @@ export async function issueToken(ctx: Context, name: string, pw: string) {
     userType: user.type
   };
   const jwt = njwt.create(claims, ctx.info.signingKey);
+  jwt.setExpiration(new Date().getTime() + EXPIRATION_HOURS * 60 * 60 * 1000);
   logger.debug(`Token created for user ${user.id}`);
   return jwt.compact();
 }
