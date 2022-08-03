@@ -2,8 +2,9 @@ import logger from 'winston';
 import { Op } from 'sequelize';
 import genProvisionScript, { makeProvisionOpts, ProvisionOptions } from './provision';
 import { Context } from './types';
-import { dateDelta, dropletId } from './util';
+import { dateDelta, dropletId, randomPw } from './util';
 import axios from 'axios';
+import { createUser } from './auth';
 
 
 export const READY_STEP = 7;
@@ -99,6 +100,9 @@ export async function createRoom(ctx: Context, opts: ProvisionOptions) {
 export async function provisionRoom(ctx: Context, room: any,
   projectId: string, sshKeyPrint: string) {
 
+  const roomPw = randomPw(10);
+  const roomUser = await createUser(ctx, room.name, 'room', roomPw);
+
   const provisionOptions: ProvisionOptions = {
     image: room.image,
     resolution: room.resolution,
@@ -106,7 +110,7 @@ export async function provisionRoom(ctx: Context, room: any,
     password: room.password,
     adminPassword: room.admin_password,
   };
-  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name);
+  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name, room.name, roomPw);
 
   const createResult = await ctx.do.droplets.create({
     name: room.name,
@@ -217,6 +221,15 @@ export async function deleteRoom(ctx: Context, id: number) {
 
   return room;
 
+}
+
+
+export async function updateRoomStatus(ctx: Context, id: number, body: any) {
+  const room = await ctx.db.Room.findByPk(id);
+  room.status = body.status;
+  room.step = body.step;
+  await room.save();
+  logger.info(`Room ${id} status updated: ${body.status} (${body.step})`);
 }
 
 

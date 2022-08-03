@@ -6,13 +6,13 @@ import { Sequelize } from 'sequelize';
 import logger from 'winston';
 import {
   checkForExpired,
-  checkProvisioningStatus,
   provisionRoom,
   deleteRoom,
   getStatus,
   renewRoom,
   createRoom,
-  markRoomForDeletion
+  markRoomForDeletion,
+  updateRoomStatus
 } from './rooms';
 import process from 'process';
 
@@ -158,6 +158,23 @@ app.use(bodyParser.json());
     await deleteRoom(ctx, id);
   });
 
+  app.post('/roomCallback', async (req, res) => {
+
+    logger.info('Callback hit!', req.body.status);
+
+    const jwt = bearerToJwt(ctx, req.headers.authorization);
+    if (!jwt || !checkType(jwt, 'room')) {
+      res.status(403).send({ error: 'Unauthorized' });
+      return;
+    }
+
+    const jwtBody: any = jwt?.body as object;
+    const roomId = jwtBody.sub;
+    res.status(200).send();
+    await updateRoomStatus(ctx, roomId, req.body);
+
+  });
+
   app.post('/user', async (req, res) => {
     const name = req.body.name;
     const pw = req.body.pw;
@@ -176,7 +193,6 @@ app.use(bodyParser.json());
 
   setInterval(() => {
     Promise.all([
-      checkProvisioningStatus(ctx),
       checkForExpired(ctx)
     ]);
   }, 10000);

@@ -45,7 +45,8 @@ export function imageMap(imageName: string): string {
 
 
 export function genProvisionScript(options: ProvisionOptions,
-  domain: string, subdomain: string): string {
+  domain: string, subdomain: string,
+  roomUsername: string, roomUserPw: string): string {
   const image = imageMap(options.image || 'firefox');
   const resp = options.resolution || '720p';
   const resolution = resp === '720p' ? '1280x720' : '1920x1080';
@@ -54,28 +55,26 @@ export function genProvisionScript(options: ProvisionOptions,
   return `#!/bin/bash
 set -e
 
-step=4
-monitor_msg () {
-  echo "$step:$1" > /monitoring/index.txt
-  step=$(echo "$step+1" | bc)
+URL=https://${domain}/v1
+LOGIN_BODY='{ "name": "${roomUsername}", "pw": "${roomUserPw}" }'
+TOKEN=$(curl --header "Content-Type: application/json" \\
+  --request POST \\
+  --data "$LOGIN_BODY" \\
+  $URL/login | jq -r .token)
+
+send_data () {
+  BODY="{ \\"status\\": \\"$1\\", \\"step\\": $2 }"
+  curl --header "Content-Type: application/json" \\
+    --header "Authorization: Bearer $TOKEN" \\
+    --request POST \\
+    --data "$BODY" \\
+    $URL/roomCallback
 }
 
-mkdir /monitoring
-cat > /etc/nginx/sites-available/provision-monitor <<EOF
-server {
-  listen 6969;
-  root /monitoring;
-  index index.txt;
+STEP=1
+send_data 'script_started' $STEP
 
-  location / {
-  }
-}
-EOF
-
-ln -s /etc/nginx/sites-available/provision-monitor /etc/nginx/sites-enabled/
-systemctl restart nginx
-monitor_msg 'nginx_ready'
-
+STEP=2
 cat > /etc/nginx/sites-available/${domain} <<EOF
 server {
   listen 80;
@@ -96,15 +95,16 @@ server {
   }
 }
 EOF
-
 ln -s /etc/nginx/sites-available/${domain} /etc/nginx/sites-enabled/
 systemctl restart nginx
-monitor_msg 'nginx_configured'
+send_data 'nginx_configured' $STEP
 
+STEP=3
 certbot -n --nginx -d ${subdomain}.${domain} --agree-tos --register-unsafely-without-email \
   --redirect
-monitor_msg 'cert_installed'
+send_data 'cert_installed' $STEP
 
+STEP=4
 cat > docker-compose.yaml <<EOF
 version: "3.4"
 services:
@@ -122,9 +122,8 @@ services:
       NEKO_EPR: 52000-52100
       NEKO_ICELITE: 1
 EOF
-
 docker-compose up -d
-monitor_msg 'ready'
+send_data 'ready' $STEP
 `;
 }
 
