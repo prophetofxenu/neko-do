@@ -49,6 +49,9 @@ function room(sequelize: Sequelize) {
     },
     expires: {
       type: DataTypes.DATE
+    },
+    callbackUrl: {
+      type: DataTypes.STRING
     }
   });
 }

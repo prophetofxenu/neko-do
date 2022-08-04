@@ -102,6 +102,7 @@ export async function provisionRoom(ctx: Context, room: any,
 
   const roomPw = randomPw(10);
   const roomUser = await createUser(ctx, room.name, 'room', roomPw);
+  room.user_id = roomUser.id;
 
   const provisionOptions: ProvisionOptions = {
     image: room.image,
@@ -218,6 +219,10 @@ export async function deleteRoom(ctx: Context, id: number) {
   await room.save();
   logger.debug('Droplet removed from db');
   logger.info(`Room ${id} destroyed`);
+  const roomUser = await ctx.db.User.findByPk(room.user_id);
+  roomUser.type = 'disabled';
+  await roomUser.save();
+  logger.debug(`Room user ${roomUser.id} disabled`);
 
   return room;
 
@@ -225,7 +230,10 @@ export async function deleteRoom(ctx: Context, id: number) {
 
 
 export async function updateRoomStatus(ctx: Context, id: number, body: any) {
-  const room = await ctx.db.Room.findByPk(id);
+  logger.debug(`Updating room status for ${id}`, body);
+  const room = await ctx.db.Room.findOne({ where: {
+    user_id: id
+  }});
   room.status = body.status;
   room.step = body.step;
   await room.save();

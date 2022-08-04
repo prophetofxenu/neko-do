@@ -15,9 +15,7 @@ import {
   updateRoomStatus
 } from './rooms';
 import process from 'process';
-
-import room from './models/room';
-import user from './models/user';
+import setupDb from './models/setup';
 
 import { checkProject } from './project';
 import { Context } from './types';
@@ -43,10 +41,7 @@ const sequelize = new Sequelize(dbString, {
   logging: msg => logger.debug(msg)
 });
 sequelize.authenticate();
-const db = {
-  Room: room(sequelize),
-  User: user(sequelize)
-};
+const db = setupDb(sequelize);
 
 if (!process.env.DOMAIN) {
   logger.error('DOMAIN not defined in .env');
@@ -160,7 +155,7 @@ app.use(bodyParser.json());
 
   app.post('/roomCallback', async (req, res) => {
 
-    logger.info('Callback hit!', req.body.status);
+    logger.info('Callback received', req.body.status);
 
     const jwt = bearerToJwt(ctx, req.headers.authorization);
     if (!jwt || !checkType(jwt, 'room')) {
