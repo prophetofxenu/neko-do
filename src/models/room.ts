@@ -50,7 +50,7 @@ function room(sequelize: Sequelize) {
     expires: {
       type: DataTypes.DATE
     },
-    callbackUrl: {
+    callback_url: {
       type: DataTypes.STRING
     }
   });

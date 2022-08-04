@@ -121,7 +121,8 @@ app.use(bodyParser.json());
       password: req.body.password,
       adminPassword: req.body.adminPassword
     };
-    const room = await createRoom(ctx, provisionOptions);
+    const callbackUrl = req.body.callbackUrl;
+    const room = await createRoom(ctx, provisionOptions, callbackUrl);
     res.send({ room: room });
     await provisionRoom(ctx, room, projectId, sshKeyPrint);
   });

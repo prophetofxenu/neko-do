@@ -76,7 +76,7 @@ export async function createDomainEntry(ctx: Context, id: number) {
 }
 
 
-export async function createRoom(ctx: Context, opts: ProvisionOptions) {
+export async function createRoom(ctx: Context, opts: ProvisionOptions, callbackUrl: string) {
   const name = `neko-room-${dropletId()}`;
   const provisionOptions = makeProvisionOpts(opts);
   logger.debug(`Provision options for ${name}`, provisionOptions);
@@ -89,7 +89,8 @@ export async function createRoom(ctx: Context, opts: ProvisionOptions) {
     fps: provisionOptions.fps,
     password: provisionOptions.password,
     admin_password: provisionOptions.adminPassword,
-    expires: dateDelta(new Date(), 60 * 60 + 2)
+    expires: dateDelta(new Date(), 60 * 60 + 2),
+    callback_url: callbackUrl
   });
   await room.save();
   logger.debug(`Room ${room.id} saved to db`);
@@ -224,6 +225,10 @@ export async function deleteRoom(ctx: Context, id: number) {
   await roomUser.save();
   logger.debug(`Room user ${roomUser.id} disabled`);
 
+  if (room.callback_url) {
+    await makeCallback(room);
+  }
+
   return room;
 
 }
@@ -238,6 +243,40 @@ export async function updateRoomStatus(ctx: Context, id: number, body: any) {
   room.step = body.step;
   await room.save();
   logger.info(`Room ${id} status updated: ${body.status} (${body.step})`);
+  if (room.status === 'ready') {
+    const delta = Math.ceil((new Date().getTime() - room.createdAt.getTime()) / 1000);
+    logger.info(`Room ${id} ready in ${delta} seconds`);
+  }
+
+  if (room.callback_url) {
+    await makeCallback(room);
+  }
+}
+
+
+export async function makeCallback(room: any) {
+  logger.info(`Performing callback for room ${room.id}`);
+  const body = {
+    id: room.id,
+    name: room.name,
+    status: room.status,
+    ip: room.ip,
+    url: room.url,
+    image: room.image,
+    resolution: room.resolution,
+    fps: room.fps,
+    password: room.password,
+    admin_password: room.admin_password,
+    created: room.createdAt,
+    expires: room.expires
+  };
+  logger.debug('Body', body);
+  try {
+    await axios.post(room.callback_url, body);
+    logger.debug('Request successful');
+  } catch (err) {
+    logger.error(err);
+  }
 }
 
 
