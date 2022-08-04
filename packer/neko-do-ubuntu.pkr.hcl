@@ -27,7 +27,7 @@ build {
       "sleep 60",
       "apt-get -y update",
       "DEBIAN_FRONTEND=noninteractive apt-get -y upgrade",
-      "apt-get -y install nginx ufw certbot python3-certbot-nginx docker.io docker-compose",
+      "apt-get -y install jq nginx ufw certbot python3-certbot-nginx docker.io docker-compose",
 
       "ufw allow 'Nginx HTTP'",
       "ufw allow 'Nginx HTTPS'",
