@@ -36,6 +36,7 @@ build {
       "ufw --force enable",
 
       "docker pull m1k1o/neko:vivaldi",
+      "docker pull m1k1o/neko:opera",
       "docker pull m1k1o/neko:ungoogled-chromium",
       "docker pull m1k1o/neko:microsoft-edge",
       "docker pull m1k1o/neko:brave",
