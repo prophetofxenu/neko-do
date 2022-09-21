@@ -26,12 +26,13 @@ import {
   issueToken,
   loadSigningKey
 } from './auth';
+import { getSnapshotId } from './util';
 
 
 dotenv.config();
 
 
-logger.add(new logger.transports.Console({ level: 'debug', format: logger.format.simple() }));
+logger.add(new logger.transports.Console({ level: 'info', format: logger.format.simple() }));
 
 const dbUser = process.env.DB_USER || 'neko';
 const dbPw = process.env.DB_PW || 'password';
@@ -68,8 +69,7 @@ app.use(bodyParser.json());
   const signingKey = await loadSigningKey();
 
   // get snapshot id
-  const snapshots = await digitalocean.snapshots.getForDroplets('neko');
-  const snapshotId = snapshots.snapshots.filter((s: any) => s.name === 'neko-do-img')[0].id;
+  const snapshotId = await getSnapshotId(digitalocean, 'neko-do-img');
   logger.info(`Snapshot ID: ${snapshotId}`);
   if (!snapshotId) {
     logger.error('Droplet snapshot not found');
