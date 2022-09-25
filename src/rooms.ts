@@ -12,7 +12,7 @@ export const DESTROYED_STEP = READY_STEP + 3;
 
 
 export async function getStatus(ctx: Context, id: number) {
-  logger.debug(`Querying info for room ${id}`);
+  logger.info(`Retrieving info for room ${id}`);
   const room = await ctx.db.Room.findByPk(id);
   if (!room) {
     logger.warn(`Room ${id} not found during querying of status`);
@@ -22,7 +22,7 @@ export async function getStatus(ctx: Context, id: number) {
 
 
 export async function updateIp(ctx: Context, id: number) {
-  logger.debug(`Getting IP address for room ${id}`);
+  logger.verbose(`Getting IP address for room ${id}`);
   const room = await ctx.db.Room.findByPk(id);
   if (!room) {
     logger.warn(`Room ${id} not found during updating of IP`);
@@ -72,6 +72,7 @@ export async function createDomainEntry(ctx: Context, id: number) {
   room.step = 3;
   room.status = 'record_created';
   await room.save();
+  logger.info(`Created domain entry for room ${room.id} (${room.url})`);
   return room;
 }
 
@@ -94,6 +95,7 @@ export async function createRoom(ctx: Context, opts: ProvisionOptions, callbackU
   });
   await room.save();
   logger.debug(`Room ${room.id} saved to db`);
+  logger.info(`Created room ${room.id} (${room.image}, ${room.resolution}p@${room.resolution})`);
   return room;
 }
 
@@ -113,11 +115,13 @@ export async function provisionRoom(ctx: Context, room: any,
     adminPassword: room.admin_password,
   };
   const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name, room.name, roomPw);
+  const machineSize = provisionOptions.resolution === '720p' ? 's-4vcpu-8gb' : 'c-16';
+  logger.verbose(`Using machine size ${machineSize}`);
 
   const createResult = await ctx.do.droplets.create({
     name: room.name,
     region: 'nyc1',
-    size: 's-4vcpu-8gb',
+    size: machineSize,
     image: `${ctx.info.snapshotId}`,
     ssh_keys: [ sshKeyPrint ],
     monitoring: true,
@@ -125,6 +129,7 @@ export async function provisionRoom(ctx: Context, room: any,
     user_data: provisionScript
   });
   logger.debug('Droplet request sent', createResult);
+  logger.info(`Created droplet for room ${room.id}`);
   room.do_id = createResult.droplet.id;
   room.expires = dateDelta(new Date(), 60 * 60 * 2);
   await room.save();
@@ -134,7 +139,7 @@ export async function provisionRoom(ctx: Context, room: any,
     projectId,
     [ `do:droplet:${createResult.droplet.id}` ]
   );
-  logger.debug('Droplet associated with project', projAssociationResult);
+  logger.verbose('Droplet associated with project', projAssociationResult);
 
   setTimeout(async () => {
     await updateIp(ctx, room.id);
@@ -159,11 +164,11 @@ export async function renewRoom(ctx: Context, id: number) {
 
   const diff = Number(room.expires) - Number(new Date());
   if (diff < 0) {
-    logger.info(`Tried to renew room ${id} but it has expired`);
+    logger.warn(`Tried to renew room ${id} but it has expired`);
     return room;
   }
   if (diff > 3600 * 1000) {
-    logger.info(`Tried to renew room ${id} but it still has more than an hour left`);
+    logger.warn(`Tried to renew room ${id} but it still has more than an hour left`);
     return room;
   }
   room.expires = dateDelta(new Date(), 3600);
@@ -175,7 +180,7 @@ export async function renewRoom(ctx: Context, id: number) {
 
 
 async function deleteDomainEntry(ctx: Context, id: number) {
-  logger.debug(`Deleting domain entry for room ${id}`);
+  logger.verbose(`Deleting domain entry for room ${id}`);
   const room = await ctx.db.Room.findByPk(id);
   if (!room) {
     logger.warn(`Room ${id} not found during deletion of domain entry`);
@@ -186,7 +191,7 @@ async function deleteDomainEntry(ctx: Context, id: number) {
   room.step = READY_STEP + 1;
   room.status = 'record_destroyed';
   await room.save();
-  logger.debug(`Domain entry removed for room ${id}`);
+  logger.info(`Domain entry removed for room ${id} (${room.url})`);
 }
 
 
@@ -219,11 +224,11 @@ export async function deleteRoom(ctx: Context, id: number) {
   room.status = 'destroyed';
   await room.save();
   logger.debug('Droplet removed from db');
-  logger.info(`Room ${id} destroyed`);
+  logger.info(`Room ${id} deleted`);
   const roomUser = await ctx.db.User.findByPk(room.user_id);
   roomUser.type = 'disabled';
   await roomUser.save();
-  logger.debug(`Room user ${roomUser.id} disabled`);
+  logger.info(`Room user ${roomUser.id} disabled`);
 
   if (room.callback_url) {
     await makeCallback(room);
@@ -242,7 +247,7 @@ export async function updateRoomStatus(ctx: Context, id: number, body: any) {
   room.status = body.status;
   room.step = body.step;
   await room.save();
-  logger.info(`Room ${id} status updated: ${body.status} (${body.step})`);
+  logger.info(`Room ${id} status updated: ${body.status}`);
   if (room.status === 'ready') {
     const delta = Math.ceil((new Date().getTime() - room.createdAt.getTime()) / 1000);
     logger.info(`Room ${id} ready in ${delta} seconds`);
@@ -255,7 +260,7 @@ export async function updateRoomStatus(ctx: Context, id: number, body: any) {
 
 
 export async function makeCallback(room: any) {
-  logger.info(`Performing callback for room ${room.id}`);
+  logger.info(`Performing status callback for room ${room.id} (${room.status})`);
   const body = {
     id: room.id,
     name: room.name,

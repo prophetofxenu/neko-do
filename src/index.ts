@@ -31,7 +31,6 @@ import { getSnapshotId } from './util';
 
 dotenv.config();
 
-
 logger.add(new logger.transports.Console({ level: 'info', format: logger.format.simple() }));
 
 const dbUser = process.env.DB_USER || 'neko';
@@ -97,6 +96,7 @@ app.use(bodyParser.json());
 
     const jwt = bearerToJwt(ctx, req.headers.authorization);
     if (!jwt || checkType(jwt, 'disabled')) {
+      logger.warn('Unauthorized request', jwt);
       res.status(403).send({ error: 'Invalid JWT' });
       return;
     }
@@ -110,6 +110,7 @@ app.use(bodyParser.json());
 
     const jwt = bearerToJwt(ctx, req.headers.authorization);
     if (!jwt || !checkType(jwt, 'admin')) {
+      logger.warn('Unauthorized request', jwt);
       res.status(403).send({ error: 'Unauthorized' });
       return;
     }
@@ -131,6 +132,7 @@ app.use(bodyParser.json());
 
     const jwt = bearerToJwt(ctx, req.headers.authorization);
     if (!jwt || !checkType(jwt, 'admin')) {
+      logger.warn('Unauthorized request', jwt);
       res.status(403).send({ error: 'Unauthorized' });
       return;
     }
@@ -144,6 +146,7 @@ app.use(bodyParser.json());
 
     const jwt = bearerToJwt(ctx, req.headers.authorization);
     if (!jwt || !checkType(jwt, 'admin')) {
+      logger.warn('Unauthorized request', jwt);
       res.status(403).send({ error: 'Unauthorized' });
       return;
     }
@@ -156,10 +159,9 @@ app.use(bodyParser.json());
 
   app.post('/roomCallback', async (req, res) => {
 
-    logger.info('Callback received', req.body.status);
-
     const jwt = bearerToJwt(ctx, req.headers.authorization);
     if (!jwt || !checkType(jwt, 'room')) {
+      logger.warn('Unauthorized request', jwt);
       res.status(403).send({ error: 'Unauthorized' });
       return;
     }
