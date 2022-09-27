@@ -45,7 +45,7 @@ export function imageMap(imageName: string): string {
 
 
 export function genProvisionScript(options: ProvisionOptions,
-  domain: string, subdomain: string,
+  domain: string, subdomain: string, callbackIp: string,
   roomUsername: string, roomUserPw: string): string {
   const image = imageMap(options.image || 'firefox');
   const resp = options.resolution || '720p';
@@ -55,7 +55,7 @@ export function genProvisionScript(options: ProvisionOptions,
   return `#!/bin/bash
 set -e
 
-URL=http://${domain}/v1
+URL=http://${callbackIp}
 LOGIN_BODY='{ "name": "${roomUsername}", "pw": "${roomUserPw}" }'
 TOKEN=$(curl --header "Content-Type: application/json" \\
   --request POST \\

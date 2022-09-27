@@ -127,7 +127,8 @@ export async function provisionRoom(ctx: Context, room: any,
     password: room.password,
     adminPassword: room.admin_password,
   };
-  const provisionScript = genProvisionScript(provisionOptions, ctx.info.callbackIp, room.name, room.name, roomPw);
+  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name,
+					     ctx.info.callbackIp, room.name, roomPw);
   const machineSize = provisionOptions.resolution === '720p' ? 's-4vcpu-8gb' : 'c-16';
   logger.verbose(`Using machine size ${machineSize}`);
 
@@ -199,7 +200,8 @@ async function deleteDomainEntry(ctx: Context, id: number) {
     logger.warn(`Room ${id} not found during deletion of domain entry`);
     return null;
   }
-  const deleteResult = await ctx.do.domains.deleteRecord(ctx.info.domain, room.record_id);
+  const top: any = ctx.info.domain.match(/^(?:.+\.)?([^.]+\.[^.]+)$/)![1];
+  const deleteResult = await ctx.do.domains.deleteRecord(top, room.record_id);
   logger.debug('Domain entry deletion', deleteResult);
   room.step = READY_STEP + 1;
   room.status = 'record_destroyed';
