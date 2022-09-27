@@ -56,6 +56,7 @@ if (!process.env.DO_SSH_KEY_ID) {
   process.exit(1);
 }
 const domain = process.env.DOMAIN;
+logger.debug(`Domain: ${domain}`);
 const doProjName = process.env.DO_PROJECT_NAME || 'neko';
 const digitalocean = new DigitalOcean(process.env.DO_TOKEN);
 const sshKeyPrint = process.env.DO_SSH_KEY_ID as string;

@@ -61,9 +61,16 @@ export async function createDomainEntry(ctx: Context, id: number) {
     return room;
   }
 
-  const recordResult = await ctx.do.domains.createRecord(ctx.info.domain, {
+  const top = ctx.info.domain.match(/^(?:.+\.)?([^.]+\.[^.]+)$/)![1];
+  let domainName = ctx.info.domain.match(/^(.+)\.[^.]+\.[^.]+$/);
+  if (domainName) {
+     domainName = `${room.name}.${front[1]}`;
+  } else {
+     domainName = room.name;
+  }
+  const recordResult = await ctx.do.domains.createRecord(top, {
     type: 'A',
-    name: room.name,
+    name: domainName,
     data: room.ip
   });
   logger.debug('Result of domain entry creation', recordResult);
