@@ -61,12 +61,18 @@ export async function createDomainEntry(ctx: Context, id: number) {
     return room;
   }
 
-  const top = ctx.info.domain.match(/^(?:.+\.)?([^.]+\.[^.]+)$/)![1];
-  let domainName = ctx.info.domain.match(/^(.+)\.[^.]+\.[^.]+$/);
-  if (domainName) {
-     domainName = `${room.name}.${front[1]}`;
+  let top: any = ctx.info.domain.match(/^(?:.+\.)?([^.]+\.[^.]+)$/);
+  if (!top) {
+    logger.error(`Invalid domain ${ctx.info.domain}`);
+    return null;
   } else {
-     domainName = room.name;
+    top = top[1];
+  }
+  let domainName: any = ctx.info.domain.match(/^(.+)\.[^.]+\.[^.]+$/);
+  if (domainName) {
+    domainName = `${room.name}.${domainName[1]}`;
+  } else {
+    domainName = room.name;
   }
   const recordResult = await ctx.do.domains.createRecord(top, {
     type: 'A',
@@ -121,7 +127,7 @@ export async function provisionRoom(ctx: Context, room: any,
     password: room.password,
     adminPassword: room.admin_password,
   };
-  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name, room.name, roomPw);
+  const provisionScript = genProvisionScript(provisionOptions, ctx.info.callbackIp, room.name, room.name, roomPw);
   const machineSize = provisionOptions.resolution === '720p' ? 's-4vcpu-8gb' : 'c-16';
   logger.verbose(`Using machine size ${machineSize}`);
 

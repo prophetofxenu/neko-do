@@ -56,6 +56,7 @@ if (!process.env.DO_SSH_KEY_ID) {
   process.exit(1);
 }
 const domain = process.env.DOMAIN;
+const callbackIp = process.env.CALLBACK_IP || domain;
 logger.debug(`Domain: ${domain}`);
 const doProjName = process.env.DO_PROJECT_NAME || 'neko';
 const digitalocean = new DigitalOcean(process.env.DO_TOKEN);
@@ -81,6 +82,7 @@ app.use(bodyParser.json());
     do: digitalocean,
     info: {
       domain: domain,
+      callbackIp: callbackIp,
       doProjName: doProjName,
       sshKeyPrint: sshKeyPrint,
       snapshotId: snapshotId,

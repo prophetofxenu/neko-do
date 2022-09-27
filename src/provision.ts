@@ -55,7 +55,7 @@ export function genProvisionScript(options: ProvisionOptions,
   return `#!/bin/bash
 set -e
 
-URL=https://${domain}/v1
+URL=http://${domain}/v1
 LOGIN_BODY='{ "name": "${roomUsername}", "pw": "${roomUserPw}" }'
 TOKEN=$(curl --header "Content-Type: application/json" \\
   --request POST \\

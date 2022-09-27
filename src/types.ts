@@ -8,6 +8,7 @@ export interface Context {
   do: any,
   info: {
     domain: string,
+    callbackIp: string,
     doProjName: string,
     sshKeyPrint: string,
     snapshotId: number,
