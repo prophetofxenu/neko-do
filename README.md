@@ -7,6 +7,8 @@ An Express API for creating instances of [n.eko](https://github.com/m1k1o/neko) 
 * Domain registration with TLS through LetsEncrypt
 * Automatic cleanup of a created room after two hours unless client extends the life of the room
 
+This project is not affiliated with the original n.eko project.
+
 
 ## Requirements
 
