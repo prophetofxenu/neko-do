@@ -121,6 +121,7 @@ services:
       NEKO_PASSWORD_ADMIN: ${options.adminPassword}
       NEKO_EPR: 52000-52100
       NEKO_ICELITE: 1
+      NEKO_FILE_TRANSFER_ENABLED: "true"
 EOF
 docker-compose up -d
 send_data 'ready' $STEP
