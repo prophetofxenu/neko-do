@@ -92,6 +92,7 @@ server {
     proxy_set_header X-Forwarded-Host \\$host;
     proxy_set_header X-Forwarded-Port \\$server_port;
     proxy_set_header X-Forwarded-Protocol \\$scheme;
+    client_max_body_size 10g;
   }
 }
 EOF
