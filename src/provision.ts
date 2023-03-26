@@ -2,7 +2,7 @@ import { randomPw } from './util';
 
 export interface ProvisionOptions {
   image?: 'vivaldi' | 'ungoogled-chromium' | 'microsoft-edge' | 'brave' | 'firefox' | 'chromium' |
-    'google-chrome' | 'tor-browser' | 'remmina' | 'xfce' | 'vlc' | 'vncviewer',
+    'google-chrome' | 'tor-browser' | 'remmina' | 'xfce' | 'kde' | 'vlc' | 'vncviewer',
   resolution?: '720p' | '1080p',
   fps?: 30 | 60,
   password: string,
@@ -33,6 +33,7 @@ export function imageMap(imageName: string): string {
     'tor-browser':        'm1k1o/neko:tor-browser',
     'remmina':            'm1k1o/neko:remmina',
     'xfce':               'm1k1o/neko:xfce',
+    'kde':                'm1k1o/neko:kde',
     'vlc':                'm1k1o/neko:vlc',
     'vncviewer':          'm1k1o/neko:vncviewer'
   }[imageName];

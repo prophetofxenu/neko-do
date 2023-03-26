@@ -32,7 +32,6 @@ build {
       "ufw allow 'Nginx HTTP'",
       "ufw allow 'Nginx HTTPS'",
       "ufw allow OpenSSH",
-      "ufw allow 6969",
       "ufw --force enable",
 
       "docker pull m1k1o/neko:vivaldi",
@@ -46,6 +45,7 @@ build {
       "docker pull m1k1o/neko:tor-browser",
       "docker pull m1k1o/neko:remmina",
       "docker pull m1k1o/neko:xfce",
+      "docker pull m1k1o/neko:kde",
       "docker pull m1k1o/neko:vlc",
       "docker pull m1k1o/neko:vncviewer"
     ]
