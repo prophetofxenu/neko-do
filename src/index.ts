@@ -12,7 +12,8 @@ import {
   renewRoom,
   createRoom,
   markRoomForDeletion,
-  updateRoomStatus
+  updateRoomStatus,
+  checkForFailed
 } from './rooms';
 import process from 'process';
 import setupDb from './models/setup';
@@ -194,7 +195,8 @@ app.use(bodyParser.json());
 
   setInterval(() => {
     Promise.all([
-      checkForExpired(ctx)
+      checkForExpired(ctx),
+      checkForFailed(ctx)
     ]);
   }, 10000);
 

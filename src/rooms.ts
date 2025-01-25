@@ -237,6 +237,8 @@ export async function deleteRoom(ctx: Context, id: number) {
   logger.debug('Droplet deletion request sent', deleteResult);
   room.step = DESTROYED_STEP;
   room.status = 'destroyed';
+  room.password = '';
+  room.admin_password = '';
   await room.save();
   logger.debug('Droplet removed from db');
   logger.info(`Room ${id} deleted`);
@@ -251,6 +253,39 @@ export async function deleteRoom(ctx: Context, id: number) {
 
   return room;
 
+}
+
+
+export async function cleanupFailedRoom(ctx: Context, id: number) {
+  const room = await ctx.db.Room.findByPk(id);
+  if (!room) {
+    logger.warn(`Room ${id} not found during cleanup`);
+    return null;
+  }
+  // delete droplet
+  if (room.do_id) {
+    try {
+      const dropletDeleteResult = await ctx.do.droplets.deleteById(room.do_id);
+      logger.info('(Cleanup) Droplet deletion request sent', dropletDeleteResult);
+    } catch (error) {
+      logger.error('(Cleanup) error when attempting to delete Droplet', error);
+    }
+  }
+  // delete domain
+  if (room.url) {
+    try {
+      await deleteDomainEntry(ctx, id);
+      logger.info('(Cleanup) domain cleaned up for room', id);
+    } catch (error) {
+      logger.error('(Cleanup) error cleaning up domain', error);
+    }
+  }
+  // set status
+  room.step = -1;
+  room.status = 'failed';
+  // send callback
+  makeCallback(room);
+  logger.info('Finished cleanup for room', id);
 }
 
 
@@ -360,4 +395,32 @@ export async function checkForExpired(ctx: Context) {
   }
   await Promise.all(promises);
 
+}
+
+
+export async function checkForFailed(ctx: Context) {
+  logger.debug('Checking for failed rooms');
+  const failedRooms = await ctx.db.Room.findAll({
+    where: {
+      status: {
+        [Op.and]: [
+          {
+            [Op.not]: 'ready'
+          },
+          {
+            [Op.not]: 'destroyed'
+          }
+        ]
+      },
+      createdAt: {
+        [Op.lt]: dateDelta(new Date(), -60 * 10)
+      }
+    }
+  });
+  const promises = [];
+  for (const room of failedRooms) {
+    logger.info(`Room ${room.id} has failed, attempting cleanup`);
+    promises.push(cleanupFailedRoom(ctx, room.id));
+  }
+  await Promise.all(promises);
 }
