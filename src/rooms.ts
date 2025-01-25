@@ -409,6 +409,9 @@ export async function checkForFailed(ctx: Context) {
           },
           {
             [Op.not]: 'destroyed'
+          },
+          {
+            [Op.not]: 'record_destroyed'
           }
         ]
       },
