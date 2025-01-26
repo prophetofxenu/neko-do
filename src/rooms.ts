@@ -127,9 +127,12 @@ export async function provisionRoom(ctx: Context, room: any,
     password: room.password,
     adminPassword: room.admin_password,
   };
-  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name,
-					     ctx.info.callbackIp, room.name, roomPw);
-  const machineSize = provisionOptions.resolution === '720p' ? 's-4vcpu-8gb' : 'c-16';
+  const provisionScript = genProvisionScript(provisionOptions, ctx.info.domain, room.name, ctx.info.callbackIp,
+    room.name, roomPw);
+  let machineSize = 'c-16';
+  if (provisionOptions.resolution?.match('720')) {
+    machineSize = 's-4vcpu-8gb';
+  }
   logger.verbose(`Using machine size ${machineSize}`);
 
   const createResult = await ctx.do.droplets.create({
