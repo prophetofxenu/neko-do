@@ -47,7 +47,6 @@ build {
       "docker pull m1k1o/neko:xfce",
       "docker pull m1k1o/neko:kde",
       "docker pull m1k1o/neko:vlc",
-      "docker pull m1k1o/neko:vncviewer"
     ]
   } 
 }
