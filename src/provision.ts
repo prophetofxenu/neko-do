@@ -35,7 +35,6 @@ export function imageMap(imageName: string): string {
     'xfce':               'm1k1o/neko:xfce',
     'kde':                'm1k1o/neko:kde',
     'vlc':                'm1k1o/neko:vlc',
-    'vncviewer':          'm1k1o/neko:vncviewer'
   }[imageName];
 
   if (!image) {
@@ -118,12 +117,11 @@ services:
       - "8080:8080"
       - "52000-52100:52000-52100/udp"
     environment:
-      NEKO_SCREEN: ${screen}
-      NEKO_PASSWORD: ${options.password}
-      NEKO_PASSWORD_ADMIN: ${options.adminPassword}
-      NEKO_EPR: 52000-52100
-      NEKO_ICELITE: 1
-      NEKO_FILE_TRANSFER_ENABLED: "true"
+      NEKO_DESKTOP_SCREEN: ${screen}
+      NEKO_MEMBER_MULTIUSER_USER_PASSWORD: ${options.password}
+      NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: ${options.adminPassword}
+      NEKO_WEBRTC_EPR: 52000-52100
+      NEKO_DESKTOP_UPLOAD_DROP: true
 EOF
 docker-compose up -d
 send_data 'ready' $STEP
