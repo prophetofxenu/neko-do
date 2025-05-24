@@ -121,7 +121,7 @@ services:
       NEKO_MEMBER_MULTIUSER_USER_PASSWORD: ${options.password}
       NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: ${options.adminPassword}
       NEKO_WEBRTC_EPR: 52000-52100
-      NEKO_FILE_TRANSFER_ENABLED: true
+      NEKO_FILE_TRANSFER_ENABLED: 1
 EOF
 docker-compose up -d
 send_data 'ready' $STEP
